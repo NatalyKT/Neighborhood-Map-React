@@ -1,230 +1,380 @@
-import React, {	Component } from 'react';
+import React, {
+	Component
+} from 'react';
+import Map from './components/myMap';
+import LocationList from './components/locations'
 import './App.css';
-import { sightLocations } from './locations.js';
-import { mapStyle } from './mapStyle.js';
-import scriptLoader from 'react-async-script-loader';
-import escapeRegExp from 'escape-string-regexp';
-import sortBy from 'sort-by';
-import fetchJsonp from 'fetch-jsonp';
 
-let markers = [];
-// name of variable https://stackoverflow.com/questions/4539905/close-all-infowindows-in-google-maps-api-v3
-let infoWindows = [];
+/*The resource for search was changed from Wikipedia to Foursquare. It turned out that this resource
+contains a detailed guide with examples of code, it is very convenient for novice developers, 
+if you need to provide the user with information about the object.*/
+const Foursquare_clientID = 'OPUEFNWGSIU2UJ0HI50SNFMSAQPMGP31PMB2PIALQCFFJ1M0';
+const Foursquare_clientSecret = '5Q1UEJIZTIEOVLVACM0QA4ALEI5IROWHQ2QVQHADYNAQPR24';
+const Foursquare_venueUrl = 'https://api.foursquare.com/v2/venues/';
+
+
+/* Map style and location files have been moved here from individual files.
+Helpful links: 
+https://stackoverflow.com/questions/34991638/google-map-react-custom-skins
+https://stackoverflow.com/questions/51420031/how-to-add-snazzy-maps-javascript-style-array-in-react
+*/
+const center = {
+	lat: 55.751244,
+	lng: 37.618423
+};
+const zoom = 15;
+
+// Map style resource: https://snazzymaps.com/style/42/apple-maps-esque
+const mapStyle = [{
+		"featureType": "landscape.man_made",
+		"elementType": "geometry",
+		"stylers": [{
+			"color": "#f7f1df"
+		}]
+	},
+	{
+		"featureType": "landscape.natural",
+		"elementType": "geometry",
+		"stylers": [{
+			"color": "#d0e3b4"
+		}]
+	},
+	{
+		"featureType": "landscape.natural.terrain",
+		"elementType": "geometry",
+		"stylers": [{
+			"visibility": "off"
+		}]
+	},
+	{
+		"featureType": "poi",
+		"elementType": "labels",
+		"stylers": [{
+			"visibility": "off"
+		}]
+	},
+	{
+		"featureType": "poi.business",
+		"elementType": "all",
+		"stylers": [{
+			"visibility": "off"
+		}]
+	},
+	{
+		"featureType": "poi.medical",
+		"elementType": "geometry",
+		"stylers": [{
+			"color": "#fbd3da"
+		}]
+	},
+	{
+		"featureType": "poi.park",
+		"elementType": "geometry",
+		"stylers": [{
+			"color": "#bde6ab"
+		}]
+	},
+	{
+		"featureType": "road",
+		"elementType": "geometry.stroke",
+		"stylers": [{
+			"visibility": "off"
+		}]
+	},
+	{
+		"featureType": "road",
+		"elementType": "labels",
+		"stylers": [{
+			"visibility": "off"
+		}]
+	},
+	{
+		"featureType": "road.highway",
+		"elementType": "geometry.fill",
+		"stylers": [{
+			"color": "#ffe15f"
+		}]
+	},
+	{
+		"featureType": "road.highway",
+		"elementType": "geometry.stroke",
+		"stylers": [{
+			"color": "#efd151"
+		}]
+	},
+	{
+		"featureType": "road.arterial",
+		"elementType": "geometry.fill",
+		"stylers": [{
+			"color": "#ffffff"
+		}]
+	},
+	{
+		"featureType": "road.local",
+		"elementType": "geometry.fill",
+		"stylers": [{
+			"color": "black"
+		}]
+	},
+	{
+		"featureType": "transit.station.airport",
+		"elementType": "geometry.fill",
+		"stylers": [{
+			"color": "#cfb2db"
+		}]
+	},
+	{
+		"featureType": "water",
+		"elementType": "geometry",
+		"stylers": [{
+			"color": "#a2daf2"
+		}]
+	}
+];
+
+// Coordinates and names of locations. 
+//The descriptions of the objects were removed, instead of them were added id to Foursquare
+const sightLocations = [{
+		title: 'Red Square',
+		location: {
+			lat: 55.753930,
+			lng: 37.620795
+		},
+		id: '4bb3345942959c74d79d212c',
+	}, {
+		title: 'Sparrow Hills',
+		location: {
+			lat: 55.706164,
+			lng: 37.536617
+		},
+		id: '4da955c81e72c1ab9bd8e322'
+	}, {
+		title: 'Arbat Street',
+		location: {
+			lat: 55.748944,
+			lng: 37.589673
+		},
+		id: '4bc09d91461576b055617a32'
+	}, {
+		title: 'Luzhniki Stadium',
+		location: {
+			lat: 55.715762,
+			lng: 37.553716
+		},
+		id: '4bb733c646d4a593732cc7c0'
+	}, {
+		title: 'Moscow Circus on Tsvetnoy Boulevard',
+		location: {
+			lat: 55.770636,
+			lng: 37.619666
+		},
+		id: '4c10fa5cce57c92894ac82d2'
+	}, {
+		title: 'Moscow International Business Center',
+		location: {
+			lat: 55.747100,
+			lng: 37.536697
+		},
+		id: '4c889aef0f3c236a3a1ff45c'
+	}, {
+		title: 'Tretyakov Gallery',
+		location: {
+			lat: 55.741389,
+			lng: 37.620864
+		},
+		id: '4beee1dcd355a593e87e0b60'
+	}, {
+		title: 'Memorial Museum of Cosmonautics',
+		location: {
+			lat: 55.822993,
+			lng: 37.639837
+		},
+		id: '4d849dc337ddba7acdb9afe4'
+	},
+
+
+];
 
 class App extends Component {
+
 	constructor(props) {
 		super(props);
-		this.state = {
-			locations: sightLocations,
-			map: {},
-			query: '',
-			requestWasSuccessful: true,
-			selectedMarker: '',
-			data: []
-		};
+		this.initMap = this.initMap.bind(this);
+		this.showingLocations = this.showingLocations.bind(this);
+		this.clearMarkers = this.clearMarkers.bind(this);
+		this.locationFiltered = this.locationFiltered.bind(this);
 	}
 
-	/* The idea of this part of code was derived from here:
-	https://stackoverflow.com/questions/51250518/using-this-setstate-with-update-from-immutability-helper-is-not-re-rendering-rea
-	Initial version: 
-	updateQuery = (query) => {
-    this.setState({query: query.trim()})
-    }
-    The moment is that Jshint considers this an error, but - it works. Hmm.
-	*/
+	state = {
+		map: null,
+		currentOne: [],
+		sightData: {}
+	}
 
-	updateQuery = function updateQuery(query) {
+	//The definition, selection and display of locations was created in accordance with 
+	//Foursquare Developer Guide 
+	getsightData() {
+		let sightData = {};
+		let venueURL = ''
+
+		sightLocations.map((pin) => {
+			venueURL = `${Foursquare_venueUrl}${pin.id}?client_id=${Foursquare_clientID}&client_secret=${Foursquare_clientSecret}&v=20180523`;
+			fetch(venueURL)
+				.then((response) => {
+					if (response.ok) {
+						return response.json();
+					}
+					throw new Error('Network response error');
+				}).then((jsonData) => {
+
+					sightData[pin.id] = jsonData.response.venue;
+					return jsonData;
+				}).catch((error) => {
+					console.error(error);
+				})
+			return true;
+		});
 		this.setState({
-			query: query.trim()
+			sightData: sightData
 		});
 	}
 
-	updateData = function updateData(newData) {
+	componentWillMount() {
+		window.initMap = this.initMap;
 		this.setState({
-			data: newData
+			currentOne: sightLocations
+		});
+		this.getsightData();
+	}
+
+	initMap() {
+		let map = new window.google.maps.Map(document.querySelector('#map'), {
+			center: center,
+			zoom: zoom,
+			mapTypeControl: false,
+			styles: mapStyle
+		});
+
+		map = this.setPins(map, sightLocations);
+		this.setState({
+			map: map
 		});
 	}
 
-	componentWillReceiveProps({
-		isScriptLoadSucceed
-	}) {
-		if (isScriptLoadSucceed) {
-			const map = new window.google.maps.Map(document.getElementById('map'), {
-				zoom: 35,
-				center: new window.google.maps.LatLng(55.751244, 37.618423),
-				styles: mapStyle
-			});
-			this.setState({
-				map: map
-			});
-		} else {
-			console.log("Oops! Something went wrong. Google Map can't be displayed.");
-			this.setState({
-				requestWasSuccessful: false
-			});
-		}
-	}
+	/*I was not sure if the name of the variable "pin" was suitable. I met this in discussions,
+	for example, here: // https://stackoverflow.com/questions/7339200/bounce-a-pin-in-google-maps-once
+	and after reflection decided that it was suitable for definition and would be clear for understanding
+	the meaning*/
+	setPins(map, pins) {
+		let newPins = [];
+		let bounds = new window.google.maps.LatLngBounds();
 
-	componentDidUpdate() {
-		//Locations filter
-		const {
-			locations,
-			query,
-			map
-		} = this.state;
-		let showingLocations = locations;
-		if (query) {
-			const match = new RegExp(escapeRegExp(query), 'i');
-			showingLocations = locations.filter((location) => match.test(location.title));
-		} else {
-			showingLocations = locations;
-		}
-		markers.forEach(mark => {
-			mark.setMap(null)
-		});
-		markers = [];
-		infoWindows = [];
-        
-		showingLocations.map((marker, index) => {
-
-			// The most common resource used for searching
-			let getLink = this.state.data.filter(function(a) {
-			  return marker.title === a[0][0];
-			}).map(function(a) {
-			  if (0 === a.length) {
-			      return "https://www.wikipedia.org";
-			        }
-			          if ("" !== a[1]) {
-			              return a[2];
-			                }
-			            });
-
-			let contentList =
-				`<div class="infoWindow">
-    <h3>${marker.title}</h3>
-    <span>${marker.description}</span>
-    <p><a href=${getLink}>Wiki Link</a></p>
-    </div>`;
-			//Add descriptions to markers
-			let addInfoWindow = new window.google.maps.InfoWindow({
-				content: contentList
-			});
-
-			let bounds = new window.google.maps.LatLngBounds();
-			//Creating the markers for the map
-			let addmarkers = new window.google.maps.Marker({
+		//Define and install markers
+		pins.forEach((pin) => {
+			let marker = new window.google.maps.Marker({
+				position: pin.location,
+				title: pin.title,
 				map: map,
-				position: marker.location,
 				animation: window.google.maps.Animation.DROP,
-				name: marker.title
+				id: pin.id
 			});
-			//Add markers and animation for the selected markers
-markers.push(addmarkers);
-infoWindows.push(addInfoWindow);
-
-addmarkers.addListener("click", function() {
-  infoWindows.forEach(function(info) {
-    info.close();
-  });
-  addInfoWindow.open(map, addmarkers);
-  //Clear he animaiton before add the new one
-  if (addmarkers.getAnimation() !== null) {
-    addmarkers.setAnimation(null);
-  } else {
-    addmarkers.setAnimation(window.google.maps.Animation.BOUNCE);
-    setTimeout(function() {
-      addmarkers.setAnimation(null);
-    }, 200);
-  }
-});
-            
-			markers.forEach((m) => bounds.extend(m.position));
-			map.fitBounds(bounds);
+			marker.addListener('click', () => {
+				this.openInfoWindow(pin.id, marker);
+			});
+			bounds.extend(marker.position);
+			newPins.push(marker);
 		});
+		map.fitBounds(bounds);
+		this.setState({
+			currentOne: newPins
+		});
+		return map;
 	}
 
-	/*Helpful link:
-	https://stackoverflow.com/questions/43454125/how-to-return-the-json-response-from-the-fetch-api
-	*/
-
-	componentDidMount() {
-		this.state.locations.map((location, index) => {
-			return fetchJsonp(`https://en.wikipedia.org/w/api.php?action=opensearch&search=${location.title}&format=json&callback=wikiCallback`)
-				.then(response => response.json()).then((responseJson) => {
-					let newData = [...this.state.data, [responseJson, responseJson[2][0], responseJson[3][0]]];
-					this.updateData(newData);
-				}).catch(error =>
-					console.error(error)
-				);
+	//Remove markers when they are not needed
+	clearMarkers() {
+		this.setState({
+			currentOne: this.state.currentOne.map((marker) => {
+				marker.setMap(null);
+				return true;
+			})
 		});
 	}
 
 
-listItem = function(item, event) {
-  let selected = markers.filter(function(currentOne) {
-    return currentOne.name === item.title;
-  });
-  window.google.maps.event.trigger(selected[0], "click");
-};
+	openInfoWindow(locationId, marker) {
+		let locationInfo = {};
+		let infoWindow = new window.google.maps.InfoWindow();
+		let infoContent = '';
+		if (this.state.sightData[locationId] !== undefined) {
 
-	handleKeyPress(target, item, e) {
-		if (item.charCode === 10) {
-			this.listItem(target, e);
+			//n accordance with Foursquare Developer Guide 
+			let thisVenue = this.state.sightData[locationId];
+			locationInfo.title = thisVenue.name ? thisVenue.name : marker.title;
+			locationInfo.website = thisVenue.url ? `<a href=${thisVenue.url} target="_blank">${thisVenue.url}</a>` : 'Not Available';
+
+			// Information that is displayed when the marker is clicked
+			//ARIA roles for the HTML tags is defined 
+			infoContent = `
+        <div tabindex="0">
+        <h3 role="heading">${locationInfo.title}</h3>
+        <p><a href="https://foursquare.com/v/${marker.id}/" target="_blank">Find More on FourSquare</a></p>
+        </div>`
+		} else {
+			infoContent = 'Error. Unable to find data';
+		}
+		infoWindow.setContent(infoContent);
+		infoWindow.open(this.state.map, marker);
+	}
+
+	showingLocations(event) {
+		this.clearMarkers();
+		let currentOne = sightLocations;
+		if (event.target.value !== "") {
+			currentOne = sightLocations.filter(function (pin) {
+				return (
+					pin.title.toLowerCase().search(event.target.value.toLowerCase()) !== -1);
+			});
+		}
+
+
+		let map = this.state.map;
+		map = this.setPins(map, currentOne);
+		this.setState({
+			map: map
+		});
+	}
+
+	//Adding the settings of the selected location (+ animation)
+	locationFiltered(locationId) {
+		for (let pin of this.state.currentOne) {
+			if (pin.id === locationId) {
+				pin.setAnimation(window.google.maps.Animation.BOUNCE);
+				pin.setAnimation(null);
+				this.openInfoWindow(locationId, pin);
+			}
 		}
 	}
 
 	render() {
-			const {
-				locations,
-				query,
-				requestWasSuccessful
-			} = this.state;
-			//the filter
-			let showingLocations = void 0;
-if (query) {
-  var match = new RegExp(escapeRegExp(query), "i");
-  showingLocations = locations.filter(function(location) {
-    return match.test(location.title);
-  });
-} else {
-  showingLocations = locations;
+		return ( <
+			div className = "App" >
+			<
+			Map / >
+			<
+			LocationList currentOne = {
+				this.state.currentOne
+			}
+			locationFiltered = {
+				this.locationFiltered
+			}
+			showingLocations = {
+				this.showingLocations
+			}
+			/> <
+			/div>
+		);
+	}
 }
 
-			showingLocations.sort(sortBy('title'));
-			return (
-				requestWasSuccessful ? ( 
-                    <div>
-					<nav className = "nav_bar">
-                    <span id = "subject">Sights of Moscow</span></nav>
-					<div id = "container">
-					<div id = "map-container">
-                    <div id = "map"></div>
-                    </div>
-                    
-					<div className = 'listSights'>
-					<input id = "placeToSearch"	className = 'search_box' type = 'text' placeholder = 'Start typing the name of the object'
-					value = {query} onChange = {(event) => this.updateQuery(event.target.value)}/>
-                    <ul> 
-                    {showingLocations.map((getLocation, index) => 
-                    <li key = {index}
-							onKeyPress = {this.handleKeyPress.bind(this, getLocation)}
-							onClick = {this.listItem.bind(this, getLocation)} > {getLocation.title} 
-                    </li>)}
-                    </ul>
-							</div>            <
-							/div>    <
-							/div>    ) : ( <div></div > )
-					)
-				}
-
-				// end  
-
-			}
-
-			//Usage from https://stackoverflow.com/questions/43351122/building-a-component-which-depends-on-a-3rd-party-script
-			
-			export default scriptLoader(
-				[`https://maps.googleapis.com/maps/api/js?libraries=places,geometry,drawing&key=AIzaSyBi8W9MCTVS_B4_DS-Y2Cr8aFfbWeqSAP8&v=3&callback=initMap`]
-			)(App);
-
-			
+export default App;
