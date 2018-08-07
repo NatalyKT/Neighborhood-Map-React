@@ -11,7 +11,7 @@
 
 ## Production mood
 
-* use the service worker in the production mood to cache the app  with 
+* use the service worker in the production mood to cache the app  with
 `npm run build`
 `serve -s build`
 
