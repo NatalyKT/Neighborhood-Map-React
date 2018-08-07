@@ -9,6 +9,12 @@
 * start the development server with `npm start`
 * you'll be able to listen the server on http://localhost:3000
 
+## Production mood
+
+* use the service worker in the production mood to cache the app  with 
+`npm run build`
+`serve -s build`
+
 ## What You're Getting
 
 Neighborhood Map is a single page application featuring a map of our neighborhood or a neighborhood we would like to visit. We had to then add functionality to this map including highlighted locations, third-party data about those locations and various ways to browse the content..
