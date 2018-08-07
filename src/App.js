@@ -230,7 +230,7 @@ class App extends Component {
 					sightData[pin.id] = jsonData.response.venue;
 					return jsonData;
 				}).catch((error) => {
-					console.error(error);
+					alert.error(error);
 				})
 			return true;
 		});
